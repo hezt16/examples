@@ -1,3 +1,4 @@
+# 加载所需的包
 import argparse
 import os
 import random
@@ -23,6 +24,7 @@ model_names = sorted(name for name in models.__dict__
     if name.islower() and not name.startswith("__")
     and callable(models.__dict__[name]))
 
+# 设置命令行参数
 parser = argparse.ArgumentParser(description='PyTorch ImageNet Training')
 parser.add_argument('data', metavar='DIR',
                     help='path to dataset')
@@ -184,10 +186,10 @@ def main_worker(gpu, ngpus_per_node, args):
     cudnn.benchmark = True
 
     # Data loading code
-    traindir = os.path.join(args.data, 'train')
-    valdir = os.path.join(args.data, 'val')
+    traindir = os.path.join(args.data, 'train') # 训练目录
+    valdir = os.path.join(args.data, 'val') # Validation data 目录
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+                                     std=[0.229, 0.224, 0.225]) # 模型正则化参数
 
     train_dataset = datasets.ImageFolder(
         traindir,
@@ -196,7 +198,7 @@ def main_worker(gpu, ngpus_per_node, args):
             transforms.RandomHorizontalFlip(),
             transforms.ToTensor(),
             normalize,
-        ]))
+        ])) # 导入训练集
 
     if args.distributed:
         train_sampler = torch.utils.data.distributed.DistributedSampler(train_dataset)
@@ -205,7 +207,7 @@ def main_worker(gpu, ngpus_per_node, args):
 
     train_loader = torch.utils.data.DataLoader(
         train_dataset, batch_size=args.batch_size, shuffle=(train_sampler is None),
-        num_workers=args.workers, pin_memory=True, sampler=train_sampler)
+        num_workers=args.workers, pin_memory=True, sampler=train_sampler)   # 加载训练集
 
     val_loader = torch.utils.data.DataLoader(
         datasets.ImageFolder(valdir, transforms.Compose([
@@ -215,25 +217,25 @@ def main_worker(gpu, ngpus_per_node, args):
             normalize,
         ])),
         batch_size=args.batch_size, shuffle=False,
-        num_workers=args.workers, pin_memory=True)
+        num_workers=args.workers, pin_memory=True)  # 加载Validation Set
 
-    if args.evaluate:
+    if args.evaluate:   # 评估模式
         validate(val_loader, model, criterion, args)
         return
 
-    for epoch in range(args.start_epoch, args.epochs):
+    for epoch in range(args.start_epoch, args.epochs): # 从start_epoch开始训练args.epochs个epoch
         if args.distributed:
             train_sampler.set_epoch(epoch)
-        adjust_learning_rate(optimizer, epoch, args)
+        adjust_learning_rate(optimizer, epoch, args)    # 调整训练参数
 
         # train for one epoch
-        train(train_loader, model, criterion, optimizer, epoch, args)
+        train(train_loader, model, criterion, optimizer, epoch, args)   # 训练模型
 
         # evaluate on validation set
-        acc1 = validate(val_loader, model, criterion, args)
+        acc1 = validate(val_loader, model, criterion, args) # 评估精度
 
         # remember best acc@1 and save checkpoint
-        is_best = acc1 > best_acc1
+        is_best = acc1 > best_acc1  # best_acc最高精度
         best_acc1 = max(acc1, best_acc1)
         save_checkpoint({
             'epoch': epoch + 1,
@@ -241,11 +243,11 @@ def main_worker(gpu, ngpus_per_node, args):
             'state_dict': model.state_dict(),
             'best_acc1': best_acc1,
             'optimizer' : optimizer.state_dict(),
-        }, is_best)
+        }, is_best) # 保存该checkpoint
 
 
 def train(train_loader, model, criterion, optimizer, epoch, args):
-    batch_time = AverageMeter()
+    batch_time = AverageMeter() # AverageMeter:平均值计数器，详见下文
     data_time = AverageMeter()
     losses = AverageMeter()
     top1 = AverageMeter()
@@ -254,17 +256,17 @@ def train(train_loader, model, criterion, optimizer, epoch, args):
     # switch to train mode
     model.train()
 
-    end = time.time()
+    end = time.time()   # 记录截止时间
     for i, (input, target) in enumerate(train_loader):
         # measure data loading time
-        data_time.update(time.time() - end)
+        data_time.update(time.time() - end) # 训练时间
 
         if args.gpu is not None:
             input = input.cuda(args.gpu, non_blocking=True)
-        target = target.cuda(args.gpu, non_blocking=True)
+        target = target.cuda(args.gpu, non_blocking=True)   # 加载cuda
 
         # compute output
-        output = model(input)
+        output = model(input)   
         loss = criterion(output, target)
 
         # measure accuracy and record loss
@@ -302,7 +304,7 @@ def validate(val_loader, model, criterion, args):
     # switch to evaluate mode
     model.eval()
 
-    with torch.no_grad():
+    with torch.no_grad():   # 不计算梯度
         end = time.time()
         for i, (input, target) in enumerate(val_loader):
             if args.gpu is not None:
@@ -338,13 +340,13 @@ def validate(val_loader, model, criterion, args):
     return top1.avg
 
 
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'): # 存储checkpoint的点
     torch.save(state, filename)
     if is_best:
         shutil.copyfile(filename, 'model_best.pth.tar')
 
 
-class AverageMeter(object):
+class AverageMeter(object): # 计算平均值和保存当前值的类
     """Computes and stores the average and current value"""
     def __init__(self):
         self.reset()
